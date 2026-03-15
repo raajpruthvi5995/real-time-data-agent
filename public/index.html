@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DataAgent — Real-Time Data Processing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --bg-1: #0f0f0f;
+      --bg-2: #141414;
+      --bg-3: #1a1a1a;
+      --border: #1f1f1f;
+      --border-2: #2a2a2a;
+      --text: #f2f2f2;
+      --text-2: #888;
+      --text-3: #444;
+      --accent: #ffffff;
+      --green: #4ade80;
+      --green-bg: #0d1f13;
+      --green-border: #1a3322;
+      --red: #f87171;
+      --font: 'Geist', -apple-system, sans-serif;
+      --mono: 'Geist Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 56px;
+      background: rgba(8,8,8,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 30px; height: 30px;
+      background: #fff;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .logo-mark svg { width: 16px; height: 16px; }
+
+    .logo-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      border: 0.5px solid var(--border-2);
+      font-size: 12px;
+      color: var(--text-2);
+      font-family: var(--mono);
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .nav-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 0.5px solid var(--border-2);
+      background: transparent;
+      color: var(--text-2);
+      font-size: 13px;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { background: var(--bg-2); color: var(--text); border-color: var(--border-2); }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 72px 24px 48px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 20px;
+      padding: 5px 14px;
+      border: 0.5px solid var(--border);
+      border-radius: 99px;
+    }
+
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 400;
+      color: var(--text);
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--text-2);
+    }
+
+    .hero p {
+      font-size: 15px;
+      color: var(--text-3);
+      line-height: 1.7;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* ── INPUT CARD ── */
+    .input-card {
+      width: 100%;
+      max-width: 660px;
+      background: var(--bg-1);
+      border: 0.5px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease 0.1s both;
+      transition: border-color 0.2s;
+    }
+
+    .input-card:focus-within {
+      border-color: var(--border-2);
+    }
+
+    .input-body {
+      padding: 20px 20px 0;
+    }
+
+    .input-text {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 64px;
+      outline: none;
+      width: 100%;
+      background: transparent;
+      border: none;
+      resize: none;
+      font-family: var(--font);
+      caret-color: #fff;
+    }
+
+    .input-text::placeholder { color: var(--text-3); }
+
+    /* File preview inside card */
+    .file-preview {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0 4px;
+      padding: 10px 14px;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      animation: fadeUp 0.25s ease;
+    }
+    .file-preview.show { display: flex; }
+
+    .file-icon-wrap {
+      width: 34px; height: 34px;
+      background: var(--bg-3);
+      border: 0.5px solid var(--border-2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .file-icon-wrap svg { width: 16px; height: 16px; color: var(--text-2); }
+
+    .file-meta { flex: 1; min-width: 0; }
+    .file-name { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 11px; color: var(--text-3); margin-top: 2px; font-family: var(--mono); }
+
+    .file-remove {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 0.5px solid var(--border-2);
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; line-height: 1;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .file-remove:hover { background: var(--bg-3); color: var(--text-2); }
+
+    /* Toolbar */
+    .input-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-top: 0.5px solid var(--border);
+      margin-top: 12px;
+    }
+
+    .toolbar-left { display: flex; align-items: center; gap: 6px; }
+
+    .t-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 13px;
+      border-radius: 9px;
+      border: 0.5px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      font-size: 13px;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .t-btn:hover { background: var(--bg-2); color: var(--text); border-color: var(--border-2); }
+    .t-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    /* Mic Button */
+    .mic-outer {
+      position: relative;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .mic-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 0.5px solid var(--border-2);
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      position: relative;
+      z-index: 2;
+    }
+    .mic-btn svg { width: 15px; height: 15px; }
+    .mic-btn:hover { background: var(--bg-2); color: var(--text); border-color: var(--border-2); }
+
+    .mic-btn.recording {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    /* Ripple rings */
+    .mic-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.5);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .mic-btn.recording ~ .mic-ring.r1 { animation: micRipple 1.5s ease-out infinite; }
+    .mic-btn.recording ~ .mic-ring.r2 { animation: micRipple 1.5s ease-out infinite 0.5s; }
+    .mic-btn.recording ~ .mic-ring.r3 { animation: micRipple 1.5s ease-out infinite 1s; }
+
+    /* Wave bars */
+    .wave-bars {
+      display: none;
+      align-items: flex-end;
+      gap: 2px;
+      height: 20px;
+    }
+    .recording-active .wave-bars { display: flex; }
+
+    .wave-bar {
+      width: 3px; border-radius: 2px;
+      background: var(--text);
+      animation: wavePulse 0.5s ease infinite alternate;
+    }
+    .wave-bar:nth-child(1) { height: 6px; animation-delay: 0s; }
+    .wave-bar:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+    .wave-bar:nth-child(3) { height: 18px; animation-delay: 0.2s; }
+    .wave-bar:nth-child(4) { height: 10px; animation-delay: 0.15s; }
+    .wave-bar:nth-child(5) { height: 14px; animation-delay: 0.05s; }
+    .wave-bar:nth-child(6) { height: 8px; animation-delay: 0.25s; }
+
+    .mic-label {
+      font-size: 12px;
+      color: var(--text-2);
+      font-family: var(--mono);
+      display: none;
+    }
+    .recording-active .mic-label { display: block; }
+
+    /* Send button */
+    .send-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: #000;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.1s, opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .send-btn:hover { opacity: 0.85; transform: scale(0.96); }
+    .send-btn svg { width: 15px; height: 15px; }
+
+    /* ── PROCESSING ── */
+    .processing-bar {
+      width: 100%;
+      max-width: 660px;
+      margin-top: 16px;
+      display: none;
+      animation: fadeUp 0.3s ease;
+    }
+    .processing-bar.show { display: block; }
+
+    .proc-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .proc-label {
+      font-size: 12px;
+      color: var(--text-3);
+      font-family: var(--mono);
+      display: flex;
+      gap: 2px;
+    }
+
+    .proc-dot {
+      animation: dotBlink 1.2s ease infinite;
+      color: var(--text-2);
+    }
+    .proc-dot:nth-child(2) { animation-delay: 0.2s; }
+    .proc-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    .proc-ms {
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: var(--mono);
+    }
+
+    .proc-track {
+      height: 1px;
+      background: var(--border);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .proc-fill {
+      height: 100%;
+      background: #fff;
+      width: 0%;
+      border-radius: 1px;
+      transition: width 0.3s ease;
+    }
+
+    /* ── RESULTS ── */
+    .results {
+      width: 100%;
+      max-width: 660px;
+      margin-top: 16px;
+      display: none;
+      animation: fadeUp 0.4s ease;
+    }
+    .results.show { display: block; }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .metric-card {
+      background: var(--bg-1);
+      border: 0.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text);
+      font-family: var(--mono);
+      letter-spacing: -0.03em;
+    }
+
+    .metric-lbl {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .insights-card {
+      background: var(--bg-1);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .insights-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .insights-title {
+      font-size: 11px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--mono);
+    }
+
+    .speed-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--green-bg);
+      color: var(--green);
+      border: 0.5px solid var(--green-border);
+      font-family: var(--mono);
+    }
+
+    /* Avatar reply styles */
+    .avatar-reply {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 18px 18px;
+      animation: slideInLeft 0.4s ease both;
+    }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .avatar svg { width: 16px; height: 16px; }
+
+    .reply-bubble {
+      flex: 1;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: 4px 14px 14px 14px;
+      padding: 14px 16px;
+    }
+
+    .reply-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-2);
+      font-family: var(--mono);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .reply-text {
+      font-size: 14px;
+      color: #ccc;
+      line-height: 1.75;
+    }
+
+    .reply-text p {
+      margin-bottom: 10px;
+    }
+    .reply-text p:last-child { margin-bottom: 0; }
+
+    .reply-text ul {
+      padding-left: 18px;
+      margin-top: 6px;
+    }
+
+    .reply-text ul li {
+      margin-bottom: 6px;
+      color: #bbb;
+    }
+
+    .typing-dots {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .typing-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--text-3);
+      animation: dotBlink 1.2s ease infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ── SUGGESTIONS ── */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 28px;
+      max-width: 660px;
+      width: 100%;
+      justify-content: center;
+      animation: fadeUp 0.6s ease 0.25s both;
+    }
+
+    .sug-btn {
+      padding: 8px 16px;
+      border-radius: 99px;
+      border: 0.5px solid var(--border);
+      background: transparent;
+      color: var(--text-3);
+      font-size: 13px;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sug-btn:hover { border-color: var(--border-2); color: var(--text-2); background: var(--bg-1); }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--text-3);
+      font-family: var(--mono);
+      border-top: 0.5px solid var(--border);
+      position: relative; z-index: 1;
+    }
+
+    /* Hidden file input */
+    #fileInput { display: none; }
+
+    /* ── PANELS ── */
+    .panel-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      backdrop-filter: blur(4px);
+    }
+    .panel-overlay.show { display: block; }
+
+    .panel {
+      position: fixed;
+      top: 0; right: -480px;
+      width: 100%; max-width: 460px;
+      height: 100%;
+      background: #0f0f0f;
+      border-left: 0.5px solid var(--border);
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+      overflow: hidden;
+    }
+    .panel.open { right: 0; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 0.5px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .panel-close {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 0.5px solid var(--border-2);
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      transition: all 0.15s;
+    }
+    .panel-close:hover { background: var(--bg-2); color: var(--text); }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .panel-body::-webkit-scrollbar { width: 4px; }
+    .panel-body::-webkit-scrollbar-track { background: transparent; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+    /* Docs panel */
+    .docs-section { margin-bottom: 28px; }
+    .docs-section-title {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .docs-card {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+    }
+    .docs-card-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+    .docs-card-desc {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    .docs-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .docs-step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--bg-3);
+      border: 0.5px solid var(--border-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-2);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .docs-step-text {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+    .docs-step-text strong { color: var(--text); font-weight: 500; }
+
+    /* History panel */
+    .history-empty {
+      text-align: center;
+      padding: 48px 0;
+      color: var(--text-3);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .history-empty svg { margin-bottom: 12px; opacity: 0.3; }
+
+    .history-item {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      animation: fadeUp 0.3s ease;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .history-item:hover { border-color: var(--border-2); }
+
+    .history-query {
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 500;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-preview {
+      font-size: 12px;
+      color: var(--text-3);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .history-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .history-time {
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: var(--mono);
+    }
+    .history-ms {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--green-bg);
+      color: var(--green);
+      border: 0.5px solid var(--green-border);
+      font-family: var(--mono);
+    }
+
+    .history-clear {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 0.5px solid var(--border);
+      background: transparent;
+      color: var(--text-3);
+      font-size: 13px;
+      font-family: var(--font);
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.15s;
+    }
+    .history-clear:hover { background: var(--bg-2); color: var(--red); border-color: var(--red); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes micRipple {
+      0%   { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(2.6); opacity: 0; }
+    }
+
+    @keyframes wavePulse {
+      from { transform: scaleY(0.4); }
+      to   { transform: scaleY(1); }
+    }
+
+    @keyframes dotBlink {
+      0%, 80%, 100% { opacity: 0.2; }
+      40%            { opacity: 1; }
+    }
+
+    @keyframes cursorBlink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 2px; height: 15px;
+      background: #fff;
+      margin-left: 1px;
+      vertical-align: middle;
+      animation: cursorBlink 1s step-end infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 26px; }
+      .main { padding: 48px 16px 32px; }
+      .topbar { padding: 0 16px; }
+      .metrics-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a class="logo" href="#">
+      <div class="logo-mark">
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="8" r="2.5" fill="#000"/>
+          <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M11.2 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="#000" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="logo-name">DataAgent</span>
+    </a>
+    <div class="topbar-right">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        online
+      </div>
+      <button class="nav-btn" onclick="openPanel('docs')">Docs</button>
+      <button class="nav-btn" onclick="openPanel('history')">History</button>
+    </div>
+  </header>
+
+  <!-- OVERLAY -->
+  <div class="panel-overlay" id="overlay" onclick="closePanels()"></div>
+
+  <!-- DOCS PANEL -->
+  <div class="panel" id="docsPanel">
+    <div class="panel-header">
+      <div class="panel-title">Documentation</div>
+      <button class="panel-close" onclick="closePanels()">×</button>
+    </div>
+    <div class="panel-body">
+      <div class="docs-section">
+        <div class="docs-section-title">What is DataAgent?</div>
+        <div class="docs-card">
+          <div class="docs-card-title">Real-Time AI Data Analyst</div>
+          <div class="docs-card-desc">DataAgent uses OpenAI's GPT to analyze your text queries and uploaded files instantly — giving you structured insights in under 500ms.</div>
+        </div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-section-title">How to use</div>
+        <div class="docs-step">
+          <div class="docs-step-num">1</div>
+          <div class="docs-step-text"><strong>Type your question</strong> in the input box. Be specific — mention what you want to find, compare, or summarize.</div>
+        </div>
+        <div class="docs-step">
+          <div class="docs-step-num">2</div>
+          <div class="docs-step-text"><strong>Upload a file</strong> (optional) — supports Excel (.xlsx), CSV, PDF, or plain text. DataAgent will read and analyze the actual data.</div>
+        </div>
+        <div class="docs-step">
+          <div class="docs-step-num">3</div>
+          <div class="docs-step-text"><strong>Use the mic</strong> to speak your query instead of typing. Click the mic button and speak clearly — works best in Chrome.</div>
+        </div>
+        <div class="docs-step">
+          <div class="docs-step-num">4</div>
+          <div class="docs-step-text"><strong>Hit the arrow</strong> or press Enter to analyze. Results appear as a structured AI response below.</div>
+        </div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-section-title">Supported file types</div>
+        <div class="docs-card">
+          <div class="docs-card-desc">.xlsx · .xls · .csv · .txt · .json</div>
+        </div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-section-title">Example prompts</div>
+        <div class="docs-card" style="margin-bottom:8px">
+          <div class="docs-card-desc">"Analyze Q3 sales trends and tell me which region performed best"</div>
+        </div>
+        <div class="docs-card" style="margin-bottom:8px">
+          <div class="docs-card-desc">"What are the most common complaints in this customer feedback file?"</div>
+        </div>
+        <div class="docs-card">
+          <div class="docs-card-desc">"Find anomalies and outliers in the uploaded dataset"</div>
+        </div>
+      </div>
+
+      <div class="docs-section">
+        <div class="docs-section-title">Tech stack</div>
+        <div class="docs-card">
+          <div class="docs-card-desc">Frontend: HTML, CSS, JavaScript · Backend: Node.js, Express · AI: OpenAI GPT-3.5-turbo · File parsing: xlsx, multer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY PANEL -->
+  <div class="panel" id="historyPanel">
+    <div class="panel-header">
+      <div class="panel-title">Query History</div>
+      <button class="panel-close" onclick="closePanels()">×</button>
+    </div>
+    <div class="panel-body" id="historyBody">
+      <div class="history-empty" id="historyEmpty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+        </svg>
+        <p>No queries yet.<br>Start analyzing to build your history.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-eyebrow">
+        <span>⚡</span> Real-time NLP processing
+      </div>
+      <h1>What would you like<br><em>to analyze today?</em></h1>
+      <p>Type your query, speak it aloud, or upload a file — get structured AI-powered insights instantly.</p>
+    </div>
+
+    <!-- Input Card -->
+    <div class="input-card">
+      <div class="input-body">
+        <textarea
+          class="input-text"
+          id="inputText"
+          rows="3"
+          placeholder="Ask anything or describe your data..."
+        ></textarea>
+
+        <!-- File preview -->
+        <div class="file-preview" id="filePreview">
+          <div class="file-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="14,2 14,8 20,8" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="8" y1="13" x2="16" y2="13" stroke-linecap="round"/>
+              <line x1="8" y1="17" x2="13" y2="17" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="file-meta">
+            <div class="file-name" id="fileName">file.xlsx</div>
+            <div class="file-size" id="fileSize">—</div>
+          </div>
+          <button class="file-remove" onclick="removeFile()" aria-label="Remove file">×</button>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="input-toolbar">
+        <div class="toolbar-left">
+
+          <!-- Upload -->
+          <button class="t-btn" onclick="document.getElementById('fileInput').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="17,8 12,3 7,8" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="12" y1="3" x2="12" y2="15" stroke-linecap="round"/>
+            </svg>
+            Upload file
+          </button>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf,.txt,.json" onchange="handleFile(event)">
+
+          <!-- Mic -->
+          <div class="mic-outer" id="micOuter">
+            <button class="mic-btn" id="micBtn" onclick="toggleMic()" aria-label="Toggle microphone">
+              <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 10v2a7 7 0 01-14 0v-2" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="12" y1="19" x2="12" y2="23" stroke-linecap="round"/>
+                <line x1="8" y1="23" x2="16" y2="23" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="mic-ring r1"></div>
+            <div class="mic-ring r2"></div>
+            <div class="mic-ring r3"></div>
+            <div class="wave-bars">
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+            </div>
+            <span class="mic-label">Listening...</span>
+          </div>
+
+        </div>
+
+        <!-- Send -->
+        <button class="send-btn" onclick="analyze()" aria-label="Analyze">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Processing -->
+    <div class="processing-bar" id="processingBar">
+      <div class="proc-status">
+        <div class="proc-label">
+          Processing<span class="proc-dot">.</span><span class="proc-dot">.</span><span class="proc-dot">.</span>
+        </div>
+        <div class="proc-ms" id="procMs">0ms</div>
+      </div>
+      <div class="proc-track">
+        <div class="proc-fill" id="procFill"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="results">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="mTime">—</div>
+          <div class="metric-lbl">Response</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val">GPT</div>
+          <div class="metric-lbl">Engine</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="mCount">—</div>
+          <div class="metric-lbl">Insights</div>
+        </div>
+      </div>
+
+      <div class="insights-card">
+        <div class="insights-header">
+          <div class="insights-title">Response</div>
+          <div class="speed-badge" id="speedBadge">— ms</div>
+        </div>
+        <div id="insightsList"></div>
+      </div>
+    </div>
+
+
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    DataAgent · Real-Time NLP Processing · Powered by OpenAI
+  </footer>
+
+  <script>
+    let micActive = false;
+    let recognition = null;
+    let procInterval = null;
+
+    // ── File upload ──
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const size = file.size < 1024 * 1024
+        ? (file.size / 1024).toFixed(1) + ' KB'
+        : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = file.type || 'File' + ' · ' + size;
+      document.getElementById('filePreview').classList.add('show');
+    }
+
+    function removeFile() {
+      document.getElementById('filePreview').classList.remove('show');
+      document.getElementById('fileInput').value = '';
+    }
+
+    // ── Mic ──
+    function toggleMic() {
+      micActive = !micActive;
+      const btn = document.getElementById('micBtn');
+      const outer = document.getElementById('micOuter');
+
+      if (micActive) {
+        btn.classList.add('recording');
+        outer.classList.add('recording-active');
+
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+          recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+          recognition.lang = 'en-US';
+          recognition.interimResults = false;
+          recognition.onresult = (e) => {
+            document.getElementById('inputText').value = e.results[0][0].transcript;
+          };
+          recognition.onend = () => { if (micActive) toggleMic(); };
+          recognition.start();
+        }
+      } else {
+        btn.classList.remove('recording');
+        outer.classList.remove('recording-active');
+        if (recognition) { recognition.stop(); recognition = null; }
+      }
+    }
+
+    // ── Analyze ──
+    async function analyze() {
+      const text = document.getElementById('inputText').value.trim();
+      if (!text) {
+        document.getElementById('inputText').placeholder = 'Please enter something first...';
+        setTimeout(() => {
+          document.getElementById('inputText').placeholder = 'Ask anything or describe your data...';
+        }, 2000);
+        return;
+      }
+
+      const procBar = document.getElementById('processingBar');
+      const procFill = document.getElementById('procFill');
+      const results = document.getElementById('results');
+
+      results.classList.remove('show');
+      procBar.classList.add('show');
+      procFill.style.width = '0%';
+
+      const start = Date.now();
+      let elapsed = 0;
+      clearInterval(procInterval);
+      procInterval = setInterval(() => {
+        elapsed = Date.now() - start;
+        document.getElementById('procMs').textContent = elapsed + 'ms';
+      }, 50);
+
+      setTimeout(() => procFill.style.width = '35%', 80);
+      setTimeout(() => procFill.style.width = '70%', 300);
+      setTimeout(() => procFill.style.width = '90%', 600);
+
+      try {
+        // Use FormData so we can send both the text AND the actual file
+        const formData = new FormData();
+        formData.append('inputText', text);
+
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput.files[0]) {
+          formData.append('file', fileInput.files[0]);
+        }
+
+        const res = await fetch('/analyze', {
+          method: 'POST',
+          body: formData   // no Content-Type header — browser sets it automatically with boundary
+        });
+        const data = await res.json();
+
+        clearInterval(procInterval);
+        procFill.style.width = '100%';
+
+        setTimeout(() => {
+          procBar.classList.remove('show');
+          renderResults(data.insight, data.responseTime);
+        }, 300);
+
+      } catch (err) {
+        clearInterval(procInterval);
+        procBar.classList.remove('show');
+        alert('Server error — make sure your server is running with: node server.js');
+      }
+    }
+
+    function renderResults(insight, responseTime) {
+      const results = document.getElementById('results');
+      const list = document.getElementById('insightsList');
+
+      document.getElementById('mTime').textContent = responseTime + 'ms';
+      document.getElementById('speedBadge').textContent = responseTime + 'ms';
+
+      // Save to history
+      const query = document.getElementById('inputText').value.trim();
+      saveToHistory(query, insight, responseTime);
+
+      // Split into sentences for counting
+      const sentences = insight.match(/[^.!?]+[.!?]+/g) || [insight];
+      const trimmed = sentences.map(s => s.trim()).filter(Boolean);
+      document.getElementById('mCount').textContent = trimmed.length;
+
+      // Build avatar reply bubble
+      list.innerHTML = '';
+      const reply = document.createElement('div');
+      reply.className = 'avatar-reply';
+      reply.innerHTML = `
+        <div class="avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2">
+            <circle cx="12" cy="8" r="3" stroke-linecap="round"/>
+            <path d="M6 20v-1a6 6 0 0112 0v1" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="reply-bubble">
+          <div class="reply-name">DataAgent</div>
+          <div class="reply-text" id="replyText">
+            <div class="typing-dots">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      list.appendChild(reply);
+      results.classList.add('show');
+
+      // After short "typing" delay, render content
+      setTimeout(() => {
+        const replyText = document.getElementById('replyText');
+        replyText.innerHTML = '';
+
+        // If 3+ sentences, show as bullet points. Otherwise paragraph.
+        if (trimmed.length >= 3) {
+          const intro = document.createElement('p');
+          intro.textContent = 'Here\'s what I found based on your input:';
+          replyText.appendChild(intro);
+
+          const ul = document.createElement('ul');
+          trimmed.forEach((s, i) => {
+            const li = document.createElement('li');
+            li.style.opacity = '0';
+            li.style.transform = 'translateX(-6px)';
+            li.style.transition = `opacity 0.3s ease ${i * 0.12}s, transform 0.3s ease ${i * 0.12}s`;
+            li.textContent = s;
+            ul.appendChild(li);
+            setTimeout(() => {
+              li.style.opacity = '1';
+              li.style.transform = 'translateX(0)';
+            }, 50 + i * 120);
+          });
+          replyText.appendChild(ul);
+        } else {
+          // Paragraph format with typewriter
+          const p = document.createElement('p');
+          replyText.appendChild(p);
+          const fullText = trimmed.join(' ');
+          let i = 0;
+          const type = () => {
+            if (i < fullText.length) {
+              p.textContent += fullText[i++];
+              setTimeout(type, 12);
+            }
+          };
+          type();
+        }
+      }, 700);
+    }
+
+    function fillAndAnalyze(text) {
+      document.getElementById('inputText').value = text;
+      analyze();
+    }
+
+    // ── Panels ──
+    let queryHistory = JSON.parse(localStorage.getItem('daHistory') || '[]');
+
+    function openPanel(type) {
+      closePanels();
+      document.getElementById('overlay').classList.add('show');
+      if (type === 'docs') {
+        document.getElementById('docsPanel').classList.add('open');
+      } else {
+        renderHistory();
+        document.getElementById('historyPanel').classList.add('open');
+      }
+    }
+
+    function closePanels() {
+      document.getElementById('overlay').classList.remove('show');
+      document.getElementById('docsPanel').classList.remove('open');
+      document.getElementById('historyPanel').classList.remove('open');
+    }
+
+    function saveToHistory(query, insight, responseTime) {
+      const entry = {
+        query,
+        insight,
+        responseTime,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })
+      };
+      queryHistory.unshift(entry);
+      if (queryHistory.length > 50) queryHistory.pop();
+      localStorage.setItem('daHistory', JSON.stringify(queryHistory));
+    }
+
+    function renderHistory() {
+      const body = document.getElementById('historyBody');
+      const empty = document.getElementById('historyEmpty');
+
+      if (queryHistory.length === 0) {
+        empty.style.display = 'block';
+        const existing = body.querySelectorAll('.history-item, .history-clear');
+        existing.forEach(el => el.remove());
+        return;
+      }
+
+      empty.style.display = 'none';
+      const existing = body.querySelectorAll('.history-item, .history-clear');
+      existing.forEach(el => el.remove());
+
+      queryHistory.forEach((entry, i) => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.innerHTML = `
+          <div class="history-query">${entry.query}</div>
+          <div class="history-preview">${entry.insight}</div>
+          <div class="history-meta">
+            <span class="history-time">${entry.date} · ${entry.timestamp}</span>
+            <span class="history-ms">${entry.responseTime}ms</span>
+          </div>
+        `;
+        item.onclick = () => {
+          document.getElementById('inputText').value = entry.query;
+          closePanels();
+        };
+        body.appendChild(item);
+      });
+
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'history-clear';
+      clearBtn.textContent = 'Clear history';
+      clearBtn.onclick = () => {
+        queryHistory = [];
+        localStorage.removeItem('daHistory');
+        renderHistory();
+      };
+      body.appendChild(clearBtn);
+    }
+
+    // Close panel on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePanels();
+    });
+
+    // Enter to submit, Shift+Enter for new line
+    document.getElementById('inputText').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        analyze();
+      }
+    });
+  </script>
+</body>
+</html>

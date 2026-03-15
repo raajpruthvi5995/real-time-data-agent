@@ -1,0 +1,15 @@
+# Environment variables — NEVER commit this
+.env
+
+# Dependencies — too large to upload
+node_modules/
+
+# Temporary uploaded files
+uploads/
+
+# Mac system files
+.DS_Store
+
+# Editor folders
+.vscode/
+.idea/
