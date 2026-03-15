@@ -23,7 +23,6 @@ A real-time AI-powered data processing agent that analyzes text queries and uplo
 - ⚡ **Under 500ms** — Optimized for low-latency responses with live ms counter
 - 📜 **Query History** — Saves all past queries and responses locally in the browser
 - 📖 **Built-in Docs** — Slide-in documentation panel explaining how to use the app
-- 🖤 **Grok-style UI** — Clean black & white professional interface with animations
 
 ---
 
@@ -85,7 +84,7 @@ real-time-data-agent/
 ├── public/
 │   └── index.html          # Frontend — UI, mic, file upload, history
 │
-├── .env                    # Your secret API key (never committed)
+├
 ├── .env.example            # Safe template to share
 ├── .gitignore              # Protects .env and node_modules
 ├── server.js               # Express backend — file parsing + OpenAI
@@ -247,8 +246,8 @@ This project is licensed under the MIT License — feel free to use, modify, and
 ## 👤 Author
 
 **Pruthviraaj**
-- GitHub: [@YOUR_GITHUB_USERNAME](https://github.com/YOUR_GITHUB_USERNAME)
+- GitHub: [@raajpruthvi5995](https://github.com/raajpruthvi5995)
 
 ---
 
-> Built as part of a portfolio project to demonstrate real-time NLP processing, API integration, and full-stack development.
+
